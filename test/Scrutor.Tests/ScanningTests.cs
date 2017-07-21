@@ -6,17 +6,135 @@ using Xunit;
 
 namespace Scrutor.Tests
 {
-    public class ScanningTests
+    public class ScanningTests : TestBase
     {
         private IServiceCollection Collection { get; } = new ServiceCollection();
 
         [Fact]
-        public void CanFilterTypesToScan()
+        public void Scan_TheseTypes()
         {
-            Collection.Scan(scan => scan.FromAssemblyOf<ITransientService>()
-                .AddClasses(classes => classes.AssignableTo<ITransientService>())
+            Collection.Scan(scan => scan
+                .AddTypes<TransientService1, TransientService2>()
                     .AsImplementedInterfaces()
                     .WithTransientLifetime());
+
+            var services = Collection.GetDescriptors<ITransientService>();
+
+            Assert.Equal(2, services.Count(x => x.ServiceType == typeof(ITransientService)));
+        }
+
+        [Fact]
+        public void UsingRegistrationStrategy_None()
+        {
+            Collection.Scan(scan => scan
+                .FromAssemblyOf<ITransientService>()
+                    .AddClasses(classes => classes.AssignableTo<ITransientService>())
+                        .AsImplementedInterfaces()
+                        .WithTransientLifetime());
+
+            Collection.Scan(scan => scan
+                .FromAssemblyOf<ITransientService>()
+                    .AddClasses(classes => classes.AssignableTo<ITransientService>())
+                        .AsImplementedInterfaces()
+                        .WithSingletonLifetime());
+
+            var services = Collection.GetDescriptors<ITransientService>();
+
+            Assert.Equal(8, services.Count(x => x.ServiceType == typeof(ITransientService)));
+        }
+
+        [Fact]
+        public void UsingRegistrationStrategy_SkipIfExists()
+        {
+            Collection.Scan(scan => scan
+                .FromAssemblyOf<ITransientService>()
+                    .AddClasses(classes => classes.AssignableTo<ITransientService>())
+                        .AsImplementedInterfaces()
+                        .WithTransientLifetime());
+
+            Collection.Scan(scan => scan
+                .FromAssemblyOf<ITransientService>()
+                    .AddClasses(classes => classes.AssignableTo<ITransientService>())
+                        .UsingRegistrationStrategy(RegistrationStrategy.Skip)
+                        .AsImplementedInterfaces()
+                        .WithSingletonLifetime());
+
+            var services = Collection.GetDescriptors<ITransientService>();
+
+            Assert.Equal(4, services.Count(x => x.ServiceType == typeof(ITransientService)));
+        }
+
+        [Fact]
+        public void UsingRegistrationStrategy_ReplaceDefault()
+        {
+            Collection.Scan(scan => scan
+                .FromAssemblyOf<ITransientService>()
+                    .AddClasses(classes => classes.AssignableTo<ITransientService>())
+                        .AsImplementedInterfaces()
+                        .WithTransientLifetime());
+
+            Collection.Scan(scan => scan
+                .FromAssemblyOf<ITransientService>()
+                    .AddClasses(classes => classes.AssignableTo<ITransientService>())
+                        .UsingRegistrationStrategy(RegistrationStrategy.Replace())
+                        .AsImplementedInterfaces()
+                        .WithSingletonLifetime());
+
+            var services = Collection.GetDescriptors<ITransientService>();
+
+            Assert.Equal(1, services.Count(x => x.ServiceType == typeof(ITransientService)));
+        }
+
+        [Fact]
+        public void UsingRegistrationStrategy_ReplaceServiceTypes()
+        {
+            Collection.Scan(scan => scan
+                .FromAssemblyOf<ITransientService>()
+                    .AddClasses(classes => classes.AssignableTo<ITransientService>())
+                        .AsImplementedInterfaces()
+                        .WithTransientLifetime());
+
+            Collection.Scan(scan => scan
+                .FromAssemblyOf<ITransientService>()
+                    .AddClasses(classes => classes.AssignableTo<ITransientService>())
+                        .UsingRegistrationStrategy(RegistrationStrategy.Replace(ReplacementBehavior.ServiceType))
+                        .AsImplementedInterfaces()
+                        .WithSingletonLifetime());
+
+            var services = Collection.GetDescriptors<ITransientService>();
+
+            Assert.Equal(1, services.Count(x => x.ServiceType == typeof(ITransientService)));
+        }
+
+        [Fact]
+        public void UsingRegistrationStrategy_ReplaceImplementationTypes()
+        {
+            Collection.Scan(scan => scan
+                .FromAssemblyOf<ITransientService>()
+                    .AddClasses(classes => classes.AssignableTo<ITransientService>())
+                        .AsImplementedInterfaces()
+                        .WithTransientLifetime());
+
+            Collection.Scan(scan => scan
+                .FromAssemblyOf<ITransientService>()
+                    .AddClasses(classes => classes.AssignableTo<ITransientService>())
+                        .UsingRegistrationStrategy(RegistrationStrategy.Replace(ReplacementBehavior.ImplementationType))
+                        .AsImplementedInterfaces()
+                        .WithSingletonLifetime());
+
+            var services = Collection.GetDescriptors<ITransientService>();
+
+            Assert.Equal(4, services.Count(x => x.ServiceType == typeof(ITransientService)));
+        }
+
+        [Fact]
+        public void CanFilterTypesToScan()
+        {
+            Collection.Scan(scan => scan
+                .FromAssemblyOf<ITransientService>()
+                    .AddClasses(classes => classes.AssignableTo<ITransientService>())
+                        .AsImplementedInterfaces()
+                        .WithTransientLifetime());
 
             var services = Collection.GetDescriptors<ITransientService>();
 

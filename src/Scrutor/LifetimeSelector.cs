@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Scrutor
 {
-    internal class LifetimeSelector : ServiceTypeSelector, ILifetimeSelector, ISelector
+    internal sealed class LifetimeSelector : ServiceTypeSelector, ILifetimeSelector, ISelector
     {
         public LifetimeSelector(IEnumerable<Type> types, IEnumerable<TypeMap> typeMaps) : base(types)
         {
@@ -15,42 +15,37 @@ namespace Scrutor
 
         private ServiceLifetime? Lifetime { get; set; }
 
-        /// <inheritdoc />
         public IImplementationTypeSelector WithSingletonLifetime()
         {
             return WithLifetime(ServiceLifetime.Singleton);
         }
 
-        /// <inheritdoc />
         public IImplementationTypeSelector WithScopedLifetime()
         {
             return WithLifetime(ServiceLifetime.Scoped);
         }
 
-        /// <inheritdoc />
         public IImplementationTypeSelector WithTransientLifetime()
         {
             return WithLifetime(ServiceLifetime.Transient);
         }
 
-        /// <inheritdoc />
         public IImplementationTypeSelector WithLifetime(ServiceLifetime lifetime)
         {
+            Preconditions.IsDefined(lifetime, nameof(lifetime));
+
             Lifetime = lifetime;
             return this;
         }
 
-        void ISelector.Populate(IServiceCollection services)
+        void ISelector.Populate(IServiceCollection services, RegistrationStrategy strategy)
         {
-            if (services == null)
-            {
-                throw new ArgumentNullException(nameof(services));
-            }
-
             if (!Lifetime.HasValue)
             {
                 Lifetime = ServiceLifetime.Transient;
             }
+
+            strategy = strategy ?? RegistrationStrategy.Append;
 
             foreach (var typeMap in TypeMaps)
             {
@@ -65,7 +60,7 @@ namespace Scrutor
 
                     var descriptor = new ServiceDescriptor(serviceType, implementationType, Lifetime.Value);
 
-                    services.Add(descriptor);
+                    strategy.Apply(services, descriptor);
                 }
             }
         }

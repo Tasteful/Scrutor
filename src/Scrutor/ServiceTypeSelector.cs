@@ -12,70 +12,54 @@ namespace Scrutor
         {
         }
 
-        /// <inheritdoc />
+        private RegistrationStrategy RegistrationStrategy { get; set; }
+
         public ILifetimeSelector AsSelf()
         {
             return As(t => new[] { t });
         }
 
-        /// <inheritdoc />
         public ILifetimeSelector As<T>()
         {
             return As(typeof(T));
         }
 
-        /// <inheritdoc />
         public ILifetimeSelector As(params Type[] types)
         {
-            if (types == null)
-            {
-                throw new ArgumentNullException(nameof(types));
-            }
+            Preconditions.NotNull(types, nameof(types));
 
             return As(types.AsEnumerable());
         }
 
-        /// <inheritdoc />
         public ILifetimeSelector As(IEnumerable<Type> types)
         {
-            if (types == null)
-            {
-                throw new ArgumentNullException(nameof(types));
-            }
+            Preconditions.NotNull(types, nameof(types));
 
             return AddSelector(Types.Select(t => new TypeMap(t, types)));
         }
 
-        /// <inheritdoc />
         public ILifetimeSelector AsImplementedInterfaces()
         {
             return AsTypeInfo(t => t.ImplementedInterfaces);
         }
 
-        /// <inheritdoc />
         public ILifetimeSelector AsMatchingInterface()
         {
             return AsMatchingInterface(null);
         }
 
-        /// <inheritdoc />
         public ILifetimeSelector AsMatchingInterface(Action<TypeInfo, IImplementationTypeFilter> action)
         {
             return AsTypeInfo(t => t.FindMatchingInterface(action));
         }
 
-        /// <inheritdoc />
         public ILifetimeSelector As(Func<Type, IEnumerable<Type>> selector)
         {
-            if (selector == null)
-            {
-                throw new ArgumentNullException(nameof(selector));
-            }
+            Preconditions.NotNull(selector, nameof(selector));
 
             return AddSelector(Types.Select(t => new TypeMap(t, selector(t))));
         }
 
-        /// <inheritdoc />
         public IImplementationTypeSelector UsingAttributes()
         {
             var selector = new AttributeSelector(Types);
@@ -85,21 +69,26 @@ namespace Scrutor
             return this;
         }
 
-        void ISelector.Populate(IServiceCollection services)
+        public IServiceTypeSelector UsingRegistrationStrategy(RegistrationStrategy registrationStrategy)
         {
-            if (services == null)
-            {
-                throw new ArgumentNullException(nameof(services));
-            }
+            Preconditions.NotNull(registrationStrategy, nameof(registrationStrategy));
 
+            RegistrationStrategy = registrationStrategy;
+            return this;
+        }
+
+        void ISelector.Populate(IServiceCollection services, RegistrationStrategy registrationStrategy)
+        {
             if (Selectors.Count == 0)
             {
                 AsSelf();
             }
 
+            var strategy = RegistrationStrategy ?? registrationStrategy;
+
             foreach (var selector in Selectors)
             {
-                selector.Populate(services);
+                selector.Populate(services, strategy);
             }
         }
 

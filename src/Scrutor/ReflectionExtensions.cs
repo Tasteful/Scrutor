@@ -227,5 +227,10 @@ namespace Scrutor
 
             return true;
         }
+
+        public static bool IsOpenGeneric(this Type type)
+        {
+            return type.GetTypeInfo().IsGenericTypeDefinition;
+        }
     }
 }

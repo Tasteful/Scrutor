@@ -1,7 +1,8 @@
 ﻿using System;
-using Microsoft.Extensions.DependencyInjection;
+using Scrutor;
 
-namespace Scrutor
+// ReSharper disable once CheckNamespace
+namespace Microsoft.Extensions.DependencyInjection
 {
     public static partial class ServiceCollectionExtensions
     {
@@ -11,30 +12,23 @@ namespace Scrutor
         /// </summary>
         /// <param name="services">The services to add to.</param>
         /// <param name="action">The configuration action.</param>
-        /// <exception cref="System.ArgumentNullException">If either the <paramref name="services"/>
+        /// <exception cref="ArgumentNullException">If either the <paramref name="services"/>
         /// or <paramref name="action"/> arguments are <c>null</c>.</exception>
-        public static IServiceCollection Scan(this IServiceCollection services, Action<IAssemblySelector> action)
+        public static IServiceCollection Scan(this IServiceCollection services, Action<ITypeSourceSelector> action)
         {
-            if (services == null)
-            {
-                throw new ArgumentNullException(nameof(services));
-            }
+            Preconditions.NotNull(services, nameof(services));
+            Preconditions.NotNull(action, nameof(action));
 
-            if (action == null)
-            {
-                throw new ArgumentNullException(nameof(action));
-            }
-
-            var selector = new AssemblySelector();
+            var selector = new TypeSourceSelector();
 
             action(selector);
 
-            return services.Populate(selector);
+            return services.Populate(selector, RegistrationStrategy.Append);
         }
 
-        private static IServiceCollection Populate(this IServiceCollection services, ISelector selector)
+        private static IServiceCollection Populate(this IServiceCollection services, ISelector selector, RegistrationStrategy registrationStrategy)
         {
-            selector.Populate(services);
+            selector.Populate(services, registrationStrategy);
             return services;
         }
     }

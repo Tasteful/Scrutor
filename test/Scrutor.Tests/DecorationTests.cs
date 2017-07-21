@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Scrutor.Tests
 {
-    public class DecorationTests
+    public class DecorationTests : TestBase
     {
         [Fact]
         public void CanDecorateType()
@@ -79,6 +79,26 @@ namespace Scrutor.Tests
         }
 
         [Fact]
+        public void CanDecorateExistingInstance()
+        {
+            var existing = new Decorated();
+
+            var provider = ConfigureProvider(services =>
+            {
+                services.AddSingleton<IDecoratedService>(existing);
+
+                services.Decorate<IDecoratedService, Decorator>();
+            });
+
+            var instance = provider.GetRequiredService<IDecoratedService>();
+
+            var decorator = Assert.IsType<Decorator>(instance);
+            var decorated = Assert.IsType<Decorated>(decorator.Inner);
+
+            Assert.Same(existing, decorated);
+        }
+
+        [Fact]
         public void CanInjectServicesIntoDecoratedType()
         {
             var provider = ConfigureProvider(services =>
@@ -119,13 +139,10 @@ namespace Scrutor.Tests
             Assert.Same(validator, decorator.InjectedService);
         }
 
-        private static IServiceProvider ConfigureProvider(Action<IServiceCollection> configure)
+        [Fact]
+        public void DecoratingNonRegisteredServiceThrows()
         {
-            var services = new ServiceCollection();
-
-            configure(services);
-
-            return services.BuildServiceProvider();
+            Assert.Throws<MissingTypeRegistrationException>(() => ConfigureProvider(services => services.Decorate<IDecoratedService, Decorator>()));
         }
 
         public interface IDecoratedService { }

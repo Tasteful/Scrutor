@@ -16,11 +16,11 @@ function Install-Dotnet
     # Download the dotnet CLI install script
     if (!(Test-Path .\dotnet\install.ps1))
     {
-      Invoke-WebRequest "https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0-preview2/scripts/obtain/dotnet-install.ps1" -OutFile ".\.dotnet\dotnet-install.ps1"
+      Invoke-WebRequest "https://raw.githubusercontent.com/dotnet/cli/rel/1.0.1/scripts/obtain/dotnet-install.ps1" -OutFile ".\.dotnet\dotnet-install.ps1"
     }
 
     # Run the dotnet CLI install
-    & .\.dotnet\dotnet-install.ps1 -Version "1.0.0-preview2-003156"
+    & .\.dotnet\dotnet-install.ps1 -Version "1.0.3"
 
     # Add the dotnet folder path to the process.
     Remove-PathVariable $env:DOTNET_INSTALL_DIR
@@ -43,13 +43,22 @@ function Remove-PathVariable
 function Restore-Packages
 {
     param([string] $DirectoryName)
-    & dotnet restore -v Warning ("""" + $DirectoryName + """")
+    & dotnet restore -v minimal ("""" + $DirectoryName + """")
+    if($LASTEXITCODE -ne 0) { exit 1 }
 }
 
 function Test-Project
 {
-    param([string] $DirectoryName)
-    & dotnet test -c Release ("""" + $DirectoryName + """")
+    param([string] $ProjectPath)
+    & dotnet test -v minimal -c Release ("""" + $ProjectPath + """")
+    if($LASTEXITCODE -ne 0) { exit 1 }
+}
+
+function Pack-Project
+{
+    param([string] $ProjectPath)
+    & dotnet pack -v minimal -c Release --output packages ("""" + $ProjectPath + """")
+    if($LASTEXITCODE -ne 0) { exit 1 }
 }
 
 ########################
@@ -62,9 +71,12 @@ Push-Location $PSScriptRoot
 Install-Dotnet
 
 # Package restore
-Get-ChildItem -Path . -Filter *.xproj -Recurse | ForEach-Object { Restore-Packages $_.DirectoryName }
+Get-ChildItem -Path . -Filter *.csproj -Recurse | ForEach-Object { Restore-Packages $_.DirectoryName }
 
 # Tests
-Get-ChildItem -Path .\test -Filter *.xproj -Recurse | ForEach-Object { Test-Project $_.DirectoryName }
+Get-ChildItem -Path .\test -Filter *.csproj -Recurse | ForEach-Object { Test-Project $_.FullName }
+
+# Pack
+Get-ChildItem -Path .\src -Filter *.csproj -Recurse | ForEach-Object { Pack-Project $_.FullName }
 
 Pop-Location
